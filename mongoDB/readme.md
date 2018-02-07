@@ -159,7 +159,33 @@ db.teams.insert(
 ```
 
 * de matchs
-
+db.matches.insert(
+     {
+      hometeam:db.teams.findOne({name:"Liverpool"},{_id:1}),
+      extteam: db.teams.findOne({name:"France"},{_id:1}),
+      competition:"pour le fun",
+      homescore:"0",
+      extscore:"3",
+      homeplayersscore:
+        [
+           {
+             player:db.players.findOne({firstname:"Jean"},{_id:1})._id,
+             score:"0"
+           },
+           {
+              player:db.players.findOne({firstname:"Luc"},{_id:1})._id,
+              score:"0"
+           }
+        ],
+      extplayersscore:
+         [
+            {
+               player:db.players.findOne({firstname:"Claude Jr"},{_id:1})._id,
+               score:"3"
+             }
+         ]
+     }
+)
 ### Construire une nouvelle collection stockant les joueurs ayant joué au moins X (par ex : 3) matchs, avec pour chaque joueur la moyenne de ses notes
 
 
@@ -173,20 +199,29 @@ Afficher les équipes avec les toutes les infos joueurs
 
 ```CQL
 db.teams.aggregate([
+  //on unwind les players
   {
      $unwind:"$players"
   },
+  //on fait un lookup de la collection players sur le champs players._id en relation avec le champ id de la collection players
   {
      $lookup:
        {
           from:"players",
-          localField:"players",
+          localField:"players._id",
           foreignField:"_id",
-          as:"machin"
+          as:"playerlist"
        }
   },
-  {
-      $match:{"machin":{$ne:[]}}
-  }
-])  
+  //on unwind la playerlist 
+{ "$unwind": "$playerlist" },
+    // on regroupe ce qu'on affiche
+    { "$group": {
+        "_id":"$_id",
+        "name": {"$first":"$name"},
+        //on push car c'est un array
+        "colors":{$push:"$colors"},
+        "playerlist": { "$push": "$playerlist" }
+    }}
+]).pretty()
 ```
